@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Air Mouse</title>
+<style>
+  :root {
+    --bg: #14181c; --panel: #1e252b; --line: #34404a; --text: #e6edf2;
+    --muted: #8b9aa6; --accent: #5fd0b0; --accent-ink: #08241c;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; touch-action: manipulation; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+  button, input, select, summary { touch-action: manipulation; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 16px/1.4 system-ui, -apple-system, sans-serif;
+    display: flex; flex-direction: column; gap: 12px;
+    padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+    user-select: none; -webkit-user-select: none;
+  }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  #status { color: var(--muted); font-size: 14px; }
+  button { font: inherit; border: 0; border-radius: 12px; color: var(--text); background: var(--panel); }
+  #connect { background: var(--accent); color: var(--accent-ink); font-weight: 600; padding: 10px 16px; }
+
+  .tools { display: flex; align-items: center; gap: 8px; }
+  .tool { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--line); }
+  .tool.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+  .main { flex: 1; min-height: 160px; display: flex; gap: 12px; }
+  #pad {
+    flex: 1; border: 2px dashed var(--line); border-radius: 20px;
+    display: grid; place-items: center; text-align: center; color: var(--muted);
+    touch-action: none; background: var(--panel); padding: 8px;
+  }
+  #pad.on { border-style: solid; border-color: var(--accent); color: var(--accent); }
+  #pad.drag { background: #20463b; }
+  #wheel {
+    width: 68px; border: 1px solid var(--line); border-radius: 20px; background: var(--panel);
+    color: var(--muted); display: grid; place-items: center; touch-action: none;
+  }
+  #wheel.on { border-color: var(--accent); color: var(--accent); }
+  #wheel svg { width: 40px; height: 100px; }
+
+  .row { display: flex; gap: 12px; }
+  .row button {
+    --bgb: var(--panel);
+    flex: 1; height: 96px; font-size: 15px; touch-action: none; border: 1px solid var(--line);
+    background: var(--bgb);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  }
+  .row button.on { --bgb: var(--accent); color: var(--accent-ink); }
+
+  .row.slim button { height: 64px; gap: 4px; font-size: 14px; }
+  .row.slim svg { width: 24px; height: 24px; }
+  .row button.laser { color: #ff7b7b; border-color: #8a3a3f; }
+  .row button.laser.active { --bgb: #e5484d; color: #fff; border-color: #e5484d; }
+  svg { fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  svg .f { fill: currentColor; }
+  .mouse { width: 26px; height: 36px; }
+  .skip { width: 34px; height: 34px; }
+
+  details { background: var(--panel); border-radius: 12px; padding: 10px 14px; }
+  summary { color: var(--muted); }
+  label { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+  input[type=range] { flex: 1; }
+  select { font: inherit; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <span id="status">Desconectado</span>
+  <span class="tools">
+    <button class="tool" id="fs" aria-label="Tela cheia no computador">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+    <button id="connect">Conectar</button>
+  </span>
+</header>
+
+<div class="row slim">
+  <button id="start">
+    <svg viewBox="0 0 24 24"><path class="f" d="M8 5L19 12L8 19Z"/></svg>
+    Iniciar
+  </button>
+  <button id="laser" class="laser">
+    <svg viewBox="0 0 24 24"><circle class="f" cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+    Apontador
+  </button>
+  <button id="stop">
+    <svg viewBox="0 0 24 24"><path d="M6 6L18 18M18 6L6 18"/></svg>
+    Sair
+  </button>
+</div>
+
+<div class="row">
+  <button id="prev">
+    <svg class="skip" viewBox="0 0 48 48"><path class="f" d="M38 10L16 24L38 38Z"/><rect class="f" x="9" y="10" width="5" height="28" rx="1"/></svg>
+    Anterior
+  </button>
+  <button id="next">
+    <svg class="skip" viewBox="0 0 48 48"><path class="f" d="M10 10L32 24L10 38Z"/><rect class="f" x="34" y="10" width="5" height="28" rx="1"/></svg>
+    Próximo
+  </button>
+</div>
+
+<div class="main">
+  <div id="pad">Segure para mover o cursor<br>toque = clique<br>toque duplo e segure = arrastar</div>
+  <div id="wheel" aria-label="Rolagem do mouse">
+    <svg viewBox="0 0 48 120">
+      <path d="M14 16L24 6L34 16"/>
+      <rect x="10" y="34" width="28" height="52" rx="14"/>
+      <rect class="f" x="21" y="45" width="6" height="15" rx="3" stroke="none"/>
+      <path d="M14 104L24 114L34 104"/>
+    </svg>
+  </div>
+</div>
+
+<div class="row">
+  <button id="left">
+    <svg class="mouse" viewBox="0 0 48 64">
+      <path class="f" d="M4 26V22A20 20 0 0 1 24 2V26Z"/>
+      <rect x="4" y="2" width="40" height="60" rx="20"/>
+      <path d="M4 26H44M24 2V26"/>
+      <ellipse cx="24" cy="14" rx="3.5" ry="6" style="fill:var(--bgb)"/>
+    </svg>
+    Esquerdo
+  </button>
+  <button id="right">
+    <svg class="mouse" viewBox="0 0 48 64">
+      <path class="f" d="M44 26V22A20 20 0 0 0 24 2V26Z"/>
+      <rect x="4" y="2" width="40" height="60" rx="20"/>
+      <path d="M4 26H44M24 2V26"/>
+      <ellipse cx="24" cy="14" rx="3.5" ry="6" style="fill:var(--bgb)"/>
+    </svg>
+    Direito
+  </button>
+</div>
+
+<details>
+  <summary>Ajustes</summary>
+  <label>Sensibilidade <input id="sens" type="range" min="0.2" max="3" step="0.1" value="1"></label>
+  <label>Zona morta <input id="dz" type="range" min="0" max="10" step="0.5" value="3"></label>
+  <label>Eixo vertical
+    <select id="vax">
+      <option value="beta">beta</option>
+      <option value="gamma" selected>gamma</option>
+      <option value="alpha">alpha</option>
+    </select>
+  </label>
+  <label>Trocar horizontal e vertical <input id="swap" type="checkbox" checked></label>
+  <label>Inverter horizontal <input id="invx" type="checkbox" checked></label>
+  <label>Inverter vertical <input id="invy" type="checkbox" checked></label>
+  <label>Inverter rolagem <input id="invw" type="checkbox"></label>
+  <p id="dbg" style="color:var(--muted);font-size:13px;margin:10px 0 0">Leitura do giroscópio aparece aqui</p>
+</details>
+
+<script>
+const SERVICE = "a1b2c3d4-0001-4a5b-9c8d-123456789abc";
+const CHAR = "a1b2c3d4-0002-4a5b-9c8d-123456789abc";
+const $ = id => document.getElementById(id);
+const status = t => $("status").textContent = t;
+
+let ch = null, busy = false, held = false, buttons = 0, lastSent = -1;
+let accX = 0, accY = 0, wheelAcc = 0, lastT = 0;
+let yawRaw = 0, pitRaw = 0, yawS = 0, pitS = 0, rawA = 0, rawB = 0, rawG = 0;
+const dead = (x, d) => Math.abs(x) < d ? 0 : Math.sign(x) * (Math.abs(x) - d);
+
+async function connect() {
+  try {
+    if (typeof DeviceMotionEvent !== "undefined" && DeviceMotionEvent.requestPermission) {
+      const p = await DeviceMotionEvent.requestPermission();
+      if (p !== "granted") { status("Sem permissão de movimento"); return; }
+    }
+    window.addEventListener("devicemotion", onMotion);
+    if (!navigator.bluetooth) { status("Abra esta página no navegador Bluefy"); return; }
+    status("Procurando…");
+    const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [SERVICE] }] });
+    dev.addEventListener("gattserverdisconnected", () => { ch = null; status("Desconectado"); });
+    const server = await dev.gatt.connect();
+    const svc = await server.getPrimaryService(SERVICE);
+    ch = await svc.getCharacteristic(CHAR);
+    status("Conectado a " + (dev.name || "AirMouse"));
+  } catch (err) { status("Erro: " + err.message); }
+}
+
+function onMotion(ev) {
+  const r = ev.rotationRate, g = ev.accelerationIncludingGravity;
+  if (!r) return;
+  rawA = r.alpha || 0; rawB = r.beta || 0; rawG = r.gamma || 0;
+  let yaw = rawA;
+  if (g) {
+    const gx = g.x || 0, gy = g.y || 0, gz = g.z || 0;
+    const n = Math.hypot(gx, gy, gz) || 1;
+    yaw = (rawB * gx + rawG * gy + rawA * gz) / n;
+  }
+  const v = $("vax").value;
+  yawRaw = yaw;
+  pitRaw = v === "beta" ? rawB : v === "gamma" ? rawG : rawA;
+}
+
+function tick(now) {
+  const dt = lastT ? Math.min((now - lastT) / 1000, 0.05) : 0;
+  lastT = now;
+  if (held) {
+    const dz = parseFloat($("dz").value);
+    yawS += 0.3 * (yawRaw - yawS);
+    pitS += 0.3 * (pitRaw - pitS);
+    const sx = $("invx").checked ? -1 : 1, sy = $("invy").checked ? 1 : -1;
+    const k = 8 * parseFloat($("sens").value);
+    const sw = $("swap").checked;
+    accX += sx * dead(sw ? pitS : yawS, dz) * dt * k;
+    accY += sy * dead(sw ? yawS : pitS, dz) * dt * k;
+    $("dbg").textContent = `alpha ${rawA.toFixed(0)}  beta ${rawB.toFixed(0)}  gamma ${rawG.toFixed(0)}  | horizontal ${yawS.toFixed(0)}  vertical ${pitS.toFixed(0)}`;
+  } else { yawS = pitS = 0; }
+  send();
+  requestAnimationFrame(tick);
+}
+
+const clamp = v => Math.max(-127, Math.min(127, Math.trunc(v)));
+
+async function send() {
+  if (!ch || busy) return;
+  const dx = clamp(accX), dy = clamp(accY), wh = clamp(wheelAcc);
+  if (!dx && !dy && !wh && buttons === lastSent) return;
+  accX -= dx; accY -= dy; wheelAcc -= wh; lastSent = buttons;
+  busy = true;
+  try { await ch.writeValueWithoutResponse(new Int8Array([dx, dy, buttons, wh])); }
+  catch (err) { status("Erro ao enviar: " + err.message); }
+  busy = false;
+}
+
+function hold(el, onChange) {
+  const set = v => { el.classList.toggle("on", v); onChange(v); };
+  el.addEventListener("pointerdown", e => { el.setPointerCapture(e.pointerId); set(true); });
+  ["pointerup", "pointercancel"].forEach(t => el.addEventListener(t, () => set(false)));
+}
+
+// Área de movimento: segurar move; toque = clique esquerdo; toque duplo e segurar = arrastar
+const TAP_MS = 200, DOUBLE_MS = 250, MOVE_DELAY_MS = 120;
+let padDownAt = 0, tapTimer = 0, moveTimer = 0, pendingTap = false, dragging = false;
+function clickLeft() { buttons |= 1; setTimeout(() => { buttons &= ~1; }, 60); }
+$("pad").addEventListener("pointerdown", e => {
+  const pad = $("pad");
+  pad.setPointerCapture(e.pointerId);
+  pad.classList.add("on");
+  padDownAt = performance.now();
+  if (pendingTap) {                       // segundo toque rápido: começa o arrasto
+    clearTimeout(tapTimer); pendingTap = false;
+    dragging = true; buttons |= 1; held = true;
+    pad.classList.add("drag");
+  } else {                                // o cursor só começa a andar após uma curta pausa,
+    moveTimer = setTimeout(() => { held = true; }, MOVE_DELAY_MS);  // para o toque não mexer nele
+  }
+});
+function padRelease(cancelled) {
+  const pad = $("pad");
+  clearTimeout(moveTimer);
+  pad.classList.remove("on", "drag");
+  held = false;
+  if (dragging) { dragging = false; buttons &= ~1; return; }
+  if (!cancelled && performance.now() - padDownAt < TAP_MS) {
+    pendingTap = true;                    // espera para ver se vem um segundo toque
+    tapTimer = setTimeout(() => { pendingTap = false; clickLeft(); }, DOUBLE_MS);
+  }
+}
+$("pad").addEventListener("pointerup", () => padRelease(false));
+$("pad").addEventListener("pointercancel", () => padRelease(true));
+hold($("left"), v => buttons = v ? (buttons | 1) : (buttons & ~1));
+hold($("right"), v => buttons = v ? (buttons | 2) : (buttons & ~2));
+hold($("next"), v => buttons = v ? (buttons | 4) : (buttons & ~4));
+hold($("prev"), v => buttons = v ? (buttons | 8) : (buttons & ~8));
+
+// Rolagem: arrastar o dedo para cima rola para baixo (um "clique" a cada 16 px)
+let wheelY = 0;
+hold($("wheel"), () => {});
+$("wheel").addEventListener("pointerdown", e => { wheelY = e.clientY; });
+$("wheel").addEventListener("pointermove", e => {
+  if (!e.buttons && e.pointerType === "mouse") return;
+  if (!$("wheel").classList.contains("on")) return;
+  const d = e.clientY - wheelY; wheelY = e.clientY;
+  wheelAcc += (d / 16) * ($("invw").checked ? -1 : 1);
+});
+
+// Tela cheia (F11), iniciar (Ctrl+F5), sair (Esc) e apontador laser (L) no computador
+hold($("fs"), v => buttons = v ? (buttons | 16) : (buttons & ~16));
+hold($("start"), v => { if (v) setLaser(false); buttons = v ? (buttons | 32) : (buttons & ~32); });
+hold($("stop"), v => { if (v) setLaser(false); buttons = v ? (buttons | 64) : (buttons & ~64); });
+
+// Apontador: cada toque envia a tecla L e alterna o estado (fica todo vermelho enquanto ligado)
+let laserOn = false;
+function setLaser(v) { laserOn = v; $("laser").classList.toggle("active", v); }
+$("laser").addEventListener("pointerdown", () => {
+  buttons |= 128;
+  setTimeout(() => { buttons &= ~128; }, 90);
+  setLaser(!laserOn);
+});
+
+// Impedir zoom por pinça e por toque duplo
+["gesturestart", "gesturechange", "gestureend"].forEach(t =>
+  document.addEventListener(t, e => e.preventDefault()));
+let lastTouchEnd = 0;
+document.addEventListener("touchend", e => {
+  const n = Date.now();
+  if (n - lastTouchEnd < 350) e.preventDefault();
+  lastTouchEnd = n;
+}, { passive: false });
+
+$("connect").addEventListener("click", connect);
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
